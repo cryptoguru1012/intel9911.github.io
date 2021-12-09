@@ -1,3 +1,4 @@
+import 'regenerator-runtime/runtime'
 import "./Home.css";
 import { useEffect, useState } from "react";
 import styled from "styled-components";
@@ -221,23 +222,23 @@ const Home = (props: HomeProps) => {
 
   return (
     <main>
-      <Background>
+      {/* <Background>
         <img src="moon_night_stars.jpg" className="back_image" />
         <img src="CryptoGangs.png" className="gang_image" />
-      </Background>
-      <HeaderContainer>
+      </Background> */}
+      {/* <HeaderContainer>
         <LeftHeader>
           <img src="CryptoGangLogo.png" width="50px" />
         </LeftHeader>
         <RightHeader>
+        </RightHeader>
+      </HeaderContainer> */}
+      {wallet && <MintContainer>
         {!wallet ? (
           <ConnectButton>Connect Wallet</ConnectButton>
         ) : (
           <Wallet>{shortenAddress(wallet.publicKey.toBase58() || "")}</Wallet>
         )}
-        </RightHeader>
-      </HeaderContainer>
-      {wallet && <MintContainer>
         <p>Balance: {(balance || 0).toLocaleString()} SOL</p>
         <p>Total Available: {itemsAvailable}</p>
         <p>Redeemed: {itemsRedeemed}</p>
