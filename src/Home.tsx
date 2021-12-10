@@ -58,7 +58,7 @@ const MintContainer = styled.div`
   top: 120px;
   left: 50%;
   transform: translateX(-50%);
-  background-color: rgba(255, 255, 255, 0.7);
+  background-color: rgba(50, 155, 255, 0.7);
   color: rgb(0, 0, 0);
   padding: 10px 150px;
   border-radius: 10px;
@@ -237,34 +237,35 @@ const Home = (props: HomeProps) => {
         {!wallet ? (
           <ConnectButton>Connect Wallet</ConnectButton>
         ) : (
-          <Wallet>{shortenAddress(wallet.publicKey.toBase58() || "")}</Wallet>
+          // <Wallet>{shortenAddress(wallet.publicKey.toBase58() || "")}</Wallet>
+          <MintButton
+            disabled={isSoldOut || isMinting || !isActive}
+            onClick={onMint}
+            variant="contained"
+          >
+            {isSoldOut ? (
+              "SOLD OUT"
+            ) : isActive ? (
+              isMinting ? (
+                <CircularProgress />
+              ) : (
+                "MINT"
+              )
+            ) : (
+              <Countdown
+                date={startDate}
+                onMount={({ completed }) => completed && setIsActive(true)}
+                onComplete={() => setIsActive(true)}
+                renderer={renderCounter}
+              />
+            )}
+          </MintButton>
         )}
-        <p>Balance: {(balance || 0).toLocaleString()} SOL</p>
+        <p>{itemsRemaining} out of {itemsAvailable} available</p>
+        {/* <p>Balance: {(balance || 0).toLocaleString()} SOL</p>
         <p>Total Available: {itemsAvailable}</p>
         <p>Redeemed: {itemsRedeemed}</p>
-        <p>Remaining: {itemsRemaining}</p>
-        <MintButton
-          disabled={isSoldOut || isMinting || !isActive}
-          onClick={onMint}
-          variant="contained"
-        >
-          {isSoldOut ? (
-            "SOLD OUT"
-          ) : isActive ? (
-            isMinting ? (
-              <CircularProgress />
-            ) : (
-              "MINT"
-            )
-          ) : (
-            <Countdown
-              date={startDate}
-              onMount={({ completed }) => completed && setIsActive(true)}
-              onComplete={() => setIsActive(true)}
-              renderer={renderCounter}
-            />
-          )}
-        </MintButton>
+        <p>Remaining: {itemsRemaining}</p> */}
       </MintContainer>}
 
       <Snackbar
