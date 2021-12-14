@@ -1,6 +1,4 @@
-import 'regenerator-runtime/runtime'
-import "./Home.css";
-import { useEffect, useState } from "react";
+import { SetStateAction, useEffect, useState } from "react";
 import styled from "styled-components";
 import Countdown from "react-countdown";
 import { Button, CircularProgress, Snackbar } from "@material-ui/core";
@@ -20,61 +18,20 @@ import {
   mintOneToken,
   shortenAddress,
 } from "./candy-machine";
-
+import axios from 'axios';
 const ConnectButton = styled(WalletDialogButton)``;
 
-const Wallet = styled.div`
-  background-color: rgb(50, 50, 150);
-  padding: 10px 20px;
-`;
-
-const CounterText = styled.span``; // add your styles here
-
-const HeaderContainer = styled.div`
-  position: fixed;
-  z-index: 2;
-  top: 0;
-  left: 0;
-  height: 70px;
-  width: 100vw;
-  background-color: rgba(255, 255, 255, 0.2);
-  color: rgb(255, 255, 255);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-`;
-
-const LeftHeader = styled.div`
-  padding-left: 10px
-`
-
-const RightHeader = styled.div`
-  padding-right: 10px
-`
+const CounterText = styled.span``;
 
 const MintContainer = styled.div`
   position: absolute;
-  z-index: 2;
-  top: 120px;
+  top: 50%;
   left: 50%;
-  transform: translateX(-50%);
-  background-color: rgba(50, 155, 255, 0.7);
-  color: rgb(0, 0, 0);
-  padding: 10px 150px;
-  border-radius: 10px;
-  font-size: 20px;
-  text-align: center;
-  p {
-    text-align: left;
-  }
+  transform: translate(-50%, -50%);
+  text-align: center
 `;
 
 const MintButton = styled(Button)``;
-
-const Background = styled.div`
-  position: relative;
-  height: 100vh
-`;
 
 export interface HomeProps {
   candyMachineId: anchor.web3.PublicKey;
@@ -85,15 +42,21 @@ export interface HomeProps {
   txTimeout: number;
 }
 
+interface Item {
+  Preview_URL: string;
+}
+
 const Home = (props: HomeProps) => {
   const [balance, setBalance] = useState<number>();
-  const [isActive, setIsActive] = useState(false); // true when countdown completes
-  const [isSoldOut, setIsSoldOut] = useState(false); // true when items remaining is zero
-  const [isMinting, setIsMinting] = useState(false); // true when user got to press MINT
+  const [isActive, setIsActive] = useState(false);
+  const [isSoldOut, setIsSoldOut] = useState(false);
+  const [isMinting, setIsMinting] = useState(false);
 
   const [itemsAvailable, setItemsAvailable] = useState(0);
   const [itemsRedeemed, setItemsRedeemed] = useState(0);
   const [itemsRemaining, setItemsRemaining] = useState(0);
+  const [myItems, setMyItems] = useState<Item[]>([]);
+  const [isReadingItems, setIsReadingItems] = useState(false);
 
   const [alertState, setAlertState] = useState<AlertState>({
     open: false,
@@ -117,12 +80,6 @@ const Home = (props: HomeProps) => {
         itemsRemaining,
         itemsRedeemed,
       } = await getCandyMachineState(
-        wallet as anchor.Wallet,
-        props.candyMachineId,
-        props.connection
-      );
-
-      const all = await getCandyMachineState(
         wallet as anchor.Wallet,
         props.candyMachineId,
         props.connection
@@ -172,7 +129,6 @@ const Home = (props: HomeProps) => {
         }
       }
     } catch (error: any) {
-      // TODO: blech:
       let message = error.msg || "Minting failed! Please try again!";
       if (!error.msg) {
         if (error.message.indexOf("0x138")) {
@@ -210,9 +166,24 @@ const Home = (props: HomeProps) => {
       if (wallet) {
         const balance = await props.connection.getBalance(wallet.publicKey);
         setBalance(balance / LAMPORTS_PER_SOL);
+        setIsReadingItems(true);
+        const GetTokenUrl = 'https://public-api.solscan.io/account/tokens';
+        const GetMetaDataUrl = 'https://api.all.art/v1/solana/';
+        const tokenData = await axios.get(GetTokenUrl, {params: {account: wallet.publicKey.toBase58()}});
+        const artData: Item[] = [];
+        tokenData.data?.map(async (token: { tokenAddress: string; }, index: number) => {
+          const temp = await axios.get(`${GetMetaDataUrl}${token.tokenAddress}`)
+          const artDatum: Item = temp.data;
+          artData.push(artDatum);
+          if (index >= tokenData.data.length - 1) {
+            setIsReadingItems(false);
+            setMyItems(artData);
+          }
+        })
+        !tokenData.data.length && setIsReadingItems(false);
       }
     })();
-  }, [wallet, props.connection]);
+  }, [wallet, props.connection, isMinting]);
 
   useEffect(refreshCandyMachineState, [
     wallet,
@@ -222,26 +193,15 @@ const Home = (props: HomeProps) => {
 
   return (
     <main>
-      {/* <Background>
-        <img src="moon_night_stars.jpg" className="back_image" />
-        <img src="CryptoGangs.png" className="gang_image" />
-      </Background> */}
-      {/* <HeaderContainer>
-        <LeftHeader>
-          <img src="CryptoGangLogo.png" width="50px" />
-        </LeftHeader>
-        <RightHeader>
-        </RightHeader>
-      </HeaderContainer> */}
-      {wallet && <MintContainer>
+      <MintContainer>
         {!wallet ? (
           <ConnectButton>Connect Wallet</ConnectButton>
         ) : (
-          // <Wallet>{shortenAddress(wallet.publicKey.toBase58() || "")}</Wallet>
-          <MintButton
+          <Button
             disabled={isSoldOut || isMinting || !isActive}
             onClick={onMint}
             variant="contained"
+            color="primary"
           >
             {isSoldOut ? (
               "SOLD OUT"
@@ -259,15 +219,23 @@ const Home = (props: HomeProps) => {
                 renderer={renderCounter}
               />
             )}
-          </MintButton>
+          </Button>
         )}
-        <p>{itemsRemaining} out of {itemsAvailable} available</p>
-        {/* <p>Balance: {(balance || 0).toLocaleString()} SOL</p>
-        <p>Total Available: {itemsAvailable}</p>
-        <p>Redeemed: {itemsRedeemed}</p>
-        <p>Remaining: {itemsRemaining}</p> */}
-      </MintContainer>}
+        {wallet && <h3>{itemsRemaining} out of {itemsAvailable} available</h3>}
 
+        <h1>Your Items</h1>
+        {wallet && (isReadingItems ?
+          <div>Loading ...</div> :
+          (myItems?.length == 0 ?
+            <div>Nothing minted</div> :
+            <div>
+              {myItems?.map((item, index) => {
+                return (<img key={index} src={item.Preview_URL} width="200px" style={{padding: "0 10px"}} />)
+              })}
+            </div>
+          ))
+        }
+      </MintContainer>
       <Snackbar
         open={alertState.open}
         autoHideDuration={6000}

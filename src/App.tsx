@@ -83,6 +83,7 @@ const App = () => {
   );
 
   return (
+    <div id="root">
       <ThemeProvider theme={theme}>
         <ConnectionProvider endpoint={endpoint}>
           <WalletProvider wallets={wallets} autoConnect={true}>
@@ -99,6 +100,7 @@ const App = () => {
           </WalletProvider>
         </ConnectionProvider>
       </ThemeProvider>
+    </div>
   );
 };
 
